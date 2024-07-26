@@ -10,36 +10,39 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 # Function to create SQLite database and table
 def create_database():
-    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bus_data.db')
+    db_path = os.path.join(os.path.dirname(os.path.abspath(_file_)), 'bus_data.db')
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
 
     # Create table if not exists
     c.execute('''CREATE TABLE IF NOT EXISTS bus_data
-                 (bus_route_name TEXT, bus_name TEXT, bus_type TEXT, departure_time TEXT,
+                 (bus_route_name TEXT, bus_name TEXT,bus_link TEXT, bus_type TEXT, departure_time TEXT,
                   duration TEXT, arrival_time TEXT, rating TEXT, fare TEXT, seats_available TEXT)''')
 
     conn.commit()
     conn.close()
 
+
 # Function to insert data into SQLite
-def insert_data(bus_route_name, bus_name, bus_type, departure_time, duration, arrival_time, rating, fare,
+def insert_data(bus_route_name, bus_name, bus_link, bus_type, departure_time, duration, arrival_time, rating, fare,
                 seats_available):
     conn = sqlite3.connect('bus_data.db')
     c = conn.cursor()
 
     # Insert data into table
-    c.execute('''INSERT INTO bus_data (bus_route_name, bus_name, bus_type, departure_time,
+    c.execute('''INSERT INTO bus_data (bus_route_name, bus_name,bus_link,bus_type, departure_time,
                  duration, arrival_time, rating, fare, seats_available)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-              (bus_route_name, bus_name, bus_type, departure_time, duration, arrival_time, rating, fare,
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+              (bus_route_name, bus_name, bus_link, bus_type, departure_time, duration, arrival_time, rating, fare,
                seats_available))
 
     conn.commit()
     conn.close()
 
+
 # Initialize SQLite database and table
 create_database()
+
 
 # Selenium script to scrape data
 def bus(url):
@@ -58,6 +61,7 @@ def bus(url):
 
     try:
         name = driver.find_element(By.XPATH, '//*[@id="mBWrapper"]/section/div[2]/h1').text
+        time = driver.find_element(By.CLASS_NAME,'IZ6rdc').text
     except NoSuchElementException:
         print(f"No route name found on URL: {url}")
         driver.quit()
@@ -105,10 +109,12 @@ def bus(url):
                     seats_available = bus.find_element(By.CLASS_NAME, "seat-left").text
 
                     # Insert data into SQLite
-                    insert_data(name, bus_name, bus_type, departure_time, duration, arrival_time, rating, fare, seats_available)
+                    insert_data(name, bus_name, url, bus_type, departure_time, duration, arrival_time, rating,
+                                fare, seats_available)
 
                     # Print or store the extracted data
                     print(f"Bus Route Name: {name}")
+                    print(f"Bus Link:{url}")
                     print(f"Bus Name: {bus_name}")
                     print(f"Bus Type: {bus_type}")
                     print(f"Departure Time: {departure_time}")
@@ -130,6 +136,7 @@ def bus(url):
 
     driver.quit()
 
+
 def stateBus(url):
     driver = webdriver.Chrome()
     driver.get(url)
@@ -137,13 +144,26 @@ def stateBus(url):
     driver.implicitly_wait(10)
 
     elements = driver.find_elements(By.XPATH, "//a[@class='route' and contains(@title, 'to')]")
+    count = 0  # Counter for limiting the number of links
+
+    excluded_links = [
+        "https://www.redbus.in/online-booking/tnstc",
+        "https://www.redbus.in/online-booking/puducherry-road-transport-corporation-prtc",
+        "https://www.redbus.in/online-booking/ktcl"
+    ]
 
     # Extract and print the href attribute for each element
     for element in elements:
+        if count >= 10:
+            break
         href = element.get_attribute('href')
-        bus(href)
-        print(href)
+        if href not in excluded_links:
+            bus(href)
+            print(href)
+            count += 1  # Increment the counter
+
     driver.quit()
+
 
 driver = webdriver.Chrome()
 driver.get("https://www.redbus.in/")
@@ -158,12 +178,15 @@ driver.maximize_window()
 
 parent_element = driver.find_element(By.XPATH, '//*[@id="root"]/div/article[2]/div/div')
 links = parent_element.find_elements(By.TAG_NAME, 'a')
+main_count = 0  # Counter for limiting the number of links
 
 # Extract and print the href attribute of each link
 for link in links:
+    if main_count >= 10:
+        break
     href = link.get_attribute('href')
     print(href)
     stateBus(href)
-
+    main_count += 1
 # Quit the driver
 driver.quit()
