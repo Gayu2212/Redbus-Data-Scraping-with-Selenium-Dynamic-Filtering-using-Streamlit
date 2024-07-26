@@ -97,6 +97,25 @@ bus_type = st.sidebar.multiselect(
     options=data["bus_type"].unique()
 )
 
+Bus_Fare =st.sidebar.multiselect(
+    "select the bus Fare",
+    options=data["fare"].unique()
+
+)
+
+Bus_Rating =st.sidebar.multiselect(
+    "select the bus Rating",
+    options=data["rating"].unique()
+
+) 
+
+Bus_Seats =st.sidebar.multiselect(
+    "select the bus Seats",
+    options=data["seats_available"].unique()
+)    
+
+
+
 # Apply filters
 filtered_data = data.copy()
 
@@ -106,6 +125,15 @@ if bus_name:
     filtered_data = filtered_data[filtered_data["bus_name"].isin(bus_name)]
 if bus_type:
     filtered_data = filtered_data[filtered_data["bus_type"].isin(bus_type)]
+if Bus_Fare:
+    filtered_data = filtered_data[filtered_data["fare"].isin(Bus_Fare)]   
+if Bus_Rating:
+    filtered_data = filtered_data[filtered_data["rating"].isin(Bus_Rating)]
+if Bus_Seats:
+    filtered_data = filtered_data[filtered_data["seats_available"].isin(Bus_Seats)]    
+ 
+
+
 
 # Pagination
 total_rows = len(filtered_data)
